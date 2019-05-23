@@ -1,0 +1,138 @@
+Functions.php code here ===================================================================================================
+
+add_action( 'wp_ajax_load_filter_sort_by_price', 'load_filter_sort_by_price' );
+add_action( 'wp_ajax_nopriv_load_filter_sort_by_price', 'load_filter_sort_by_price' );
+function load_filter_sort_by_price() {
+    $filterValue = $_POST['sort_by_price'];
+    $term_id = $_POST['term_id'];
+    $textfieldvalue = $_POST['textfieldvalue'];
+    $post_ids = $_POST['custom_arr1'];
+    $myform = $_POST['myform'];
+
+    if ( $filterValue == 'low_to_high'){
+        $alldata = array(
+            'post_type'      => 'property',
+            'post_status'    => 'publish',  
+            'posts_per_page' => -1,   
+            'post__in' => explode(',', $post_ids),
+            'meta_key' => 'any_price',
+            'orderby'  => array(
+                'meta_value_num' => 'ASC',
+                'post_date'      => 'ASC',
+            ),
+            'meta_query' => array(
+                array(
+                  'key' => 'any_price',
+                )
+            ), 
+            'tax_query' => array(
+                array(
+                  'taxonomy' => 'searching',
+                  'field' => 'term_id',
+                  'terms' => $term_id
+                )
+            ),
+        );
+    }
+    elseif ($filterValue == 'high_to_low') {
+        $alldata = array(
+            'post_type'      => 'property',
+            'post_status'    => 'publish',  
+            'posts_per_page' => -1,
+            'order' => 'DESC',    
+            'post__in' => explode(',', $post_ids),
+            'meta_key' => 'any_price',
+            'meta_key' => 'any_price',
+            'orderby'  => array(
+                'meta_value_num' => 'DESC',
+                'post_date'      => 'DESC',
+            ),
+            'meta_query' => array(
+                array(
+                  'key' => 'any_price',
+                )
+            ), 
+            'tax_query' => array(
+                array(
+                  'taxonomy' => 'searching',
+                  'field' => 'term_id',
+                  'terms' => $term_id
+                )
+            ),
+        );
+    }
+    else{
+        echo "No Record";
+    }
+    $queryAdsUser = new WP_Query( $alldata );
+    //print_r($queryAdsUser);die();
+    if ( $queryAdsUser->have_posts() ) : 
+        while ( $queryAdsUser->have_posts() ) : $queryAdsUser->the_post();
+            $property_location = get_field('property_location');
+            $author_name = get_field('property_location');
+            $short_post = get_the_ID();
+            $author_id = get_post_field ('post_author', $short_post);
+            $display_name = get_the_author_meta( 'display_name' , $author_id ); ?>
+            <div class="listing-sub">
+                <div class="image-lis-sub">
+                    <?php the_post_thumbnail(); ?>
+                    <i class="fa fa-heart-o"></i>
+                </div>
+                <div class="image-txt-sub ">
+                    <div class="img-txt-subhead text-left">
+                        <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>                      
+                        <p class="distance-l"><span class="f-cat"><i class="fa fa-usd" aria-hidden="true"></i>Sales from</span><strong><?php if(get_field('any_price')) { ?>$<?php the_field('any_price'); ?><?php } ?></strong></p>
+                        <?php if(!empty($property_location)){ ?>
+                        <p class="add-l"><i class="fa fa-map" aria-hidden="true"></i><?php echo $property_location; ?></p>
+                        <?php } ?>
+                        <?php if(!empty($display_name)){ ?>
+                             <p class="catgry-l"><span class="f-cat"><i class="fa fa-user"></i> By <?php echo $display_name; ?></span></p>
+                        <?php } ?>
+                        <input type="hidden" id="post_ids" name="post_ids[]" value="<?php echo $short_post; ?>">
+                        <div class="starReating"></div>
+                        <div class="dsply-num">
+                            <a class="btn btn-default" href="<?php the_permalink(); ?>">More <i class="fa fa-arrow-right"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endwhile; 
+        wp_reset_postdata();
+    else :
+    endif;
+    die(); 
+}
+
+
+
+
+
+
+Footer.php code here===================================================================
+
+<script type="text/javascript">
+  $("#sort_by_price").change(function () {
+    //alert("hello");
+    var sort_by_price = $("#sort_by_price").val();
+    var term_id = $("#property_term_id").val();
+    var textfieldvalue = $("#textfieldvalue").val();
+    var post_ids = $("#post_ids").val();
+    var myform = $("#myform").val();
+    var custom_arr1 = [];
+    $('.listing-sub').each(function(){
+      var ids = $(this).find("input#post_ids").attr('value');
+      custom_arr1.push(ids);
+    });
+    //alert(custom_arr1);
+    jQuery.ajax({
+      url:"<?php echo site_url();?>/wp-admin/admin-ajax.php",
+      type:'POST',
+      data:'action=load_filter_sort_by_price&sort_by_price=' + sort_by_price +'&term_id='+term_id + '&textfieldvalue='+textfieldvalue + '&custom_arr1='+custom_arr1 + '&myform='+myform,
+      success:function(data){
+         console.log(data);
+         jQuery('.alllistings').html(data);
+      }
+    });
+    
+  });
+</script>
